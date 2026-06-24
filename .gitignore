@@ -1,0 +1,10 @@
+.env
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+sourcemind_db/
+sourcemind_meta.json
+sourcemind_conflicts.json
+babel.json
+.streamlit/secrets.toml
