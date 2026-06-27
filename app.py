@@ -138,7 +138,7 @@ def _secret(key: str, default: str = "") -> str:
 SUPABASE_URL = _secret("SUPABASE_URL")
 SUPABASE_KEY = _secret("SUPABASE_ANON_KEY")
 GROQ_KEY     = _secret("GROQ_API_KEY")
-REDIRECT_URL = _secret("REDIRECT_URL", "http://localhost:8501")
+REDIRECT_URL = _secret("REDIRECT_URL", "https://adaptive-rag1.streamlit.app/")
 PERSIST_DIR  = "./sourcemind_db"
 
 
