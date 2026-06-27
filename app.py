@@ -138,7 +138,7 @@ def _secret(key: str, default: str = "") -> str:
 SUPABASE_URL = _secret("SUPABASE_URL")
 SUPABASE_KEY = _secret("SUPABASE_ANON_KEY")
 GROQ_KEY     = _secret("GROQ_API_KEY")
-REDIRECT_URL = _secret("REDIRECT_URL", "https://adaptive-rag1.streamlit.app/")
+REDIRECT_URL = _secret("REDIRECT_URL", "http://localhost:8501")
 PERSIST_DIR  = "./sourcemind_db"
 
 
@@ -162,9 +162,10 @@ def get_authed_supabase():
     """
     sb    = get_supabase()
     token = st.session_state.get("access_token", "")
+    refresh_token = st.session_state.get("refresh_token", "")
     if sb and token:
         try:
-            sb.auth.set_session(token, "")
+            sb.auth.set_session(token, refresh_token)
         except Exception:
             pass   # token expired or invalid — reads still work, writes may fail
     return sb
@@ -215,6 +216,13 @@ def get_oauth_url() -> str:
         return ""
 
 
+def _query_param_value(params, key: str) -> str:
+    value = params.get(key, "")
+    if isinstance(value, list):
+        return value[0] if value else ""
+    return value or ""
+
+
 def handle_oauth_callback():
     """
     Called on every page load.
@@ -230,8 +238,14 @@ def handle_oauth_callback():
         return
 
     try:
-        session = sb.auth.exchange_code_for_session({"auth_code": params["code"]})
+        session = sb.auth.exchange_code_for_session({
+            "auth_code": _query_param_value(params, "code"),
+            "redirect_to": REDIRECT_URL,
+        })
         u       = session.user
+
+        if not u or not session.session:
+            raise RuntimeError("Supabase did not return a user session.")
 
         st.session_state["user"] = {
             "id":     u.id,
@@ -239,8 +253,9 @@ def handle_oauth_callback():
             "name":   u.user_metadata.get("full_name", u.email.split("@")[0]),
             "avatar": u.user_metadata.get("avatar_url", ""),
         }
-        # CRITICAL: store token so get_authed_supabase() can attach it
+        # CRITICAL: store tokens so get_authed_supabase() can attach/refresh them
         st.session_state["access_token"] = session.session.access_token
+        st.session_state["refresh_token"] = session.session.refresh_token
 
         _upsert_profile(
             get_authed_supabase(), u.id, u.email,
@@ -291,6 +306,7 @@ def email_signup(email: str, password: str, name: str) -> str | None:
         }
         # CRITICAL: store JWT so RLS writes work
         st.session_state["access_token"] = res.session.access_token
+        st.session_state["refresh_token"] = res.session.refresh_token
         _upsert_profile(get_authed_supabase(), u.id, email,
                         u.user_metadata.get("full_name", name), "")
         return None
@@ -320,6 +336,7 @@ def email_signin(email: str, password: str) -> str | None:
         }
         # CRITICAL: store JWT so RLS writes work
         st.session_state["access_token"] = res.session.access_token
+        st.session_state["refresh_token"] = res.session.refresh_token
         _upsert_profile(get_authed_supabase(), u.id, u.email,
                         u.user_metadata.get("full_name", ""),
                         u.user_metadata.get("avatar_url", ""))
@@ -365,7 +382,7 @@ def sign_out():
             sb.auth.sign_out()
         except Exception:
             pass
-    for k in ["user", "access_token", "current_conv_id", "chat_history"]:
+    for k in ["user", "access_token", "refresh_token", "current_conv_id", "chat_history"]:
         st.session_state.pop(k, None)
     st.rerun()
 
@@ -1008,10 +1025,10 @@ def show_login_page():
         """, unsafe_allow_html=True)
 
         tab_in, tab_up, tab_reset = st.tabs(["Sign In", "Sign Up", "Reset Password"])
+        oauth_url = get_oauth_url()
 
         # ── Sign In ──────────────────────────────
         with tab_in:
-            oauth_url = get_oauth_url()
             if oauth_url:
                 st.link_button("🔑  Continue with Google",
                                url=oauth_url, use_container_width=True)
@@ -1034,7 +1051,6 @@ def show_login_page():
 
         # ── Sign Up ──────────────────────────────
         with tab_up:
-            oauth_url = get_oauth_url()
             if oauth_url:
                 st.link_button("🔑  Sign up with Google",
                                url=oauth_url, use_container_width=True)
