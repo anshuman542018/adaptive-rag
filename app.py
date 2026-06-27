@@ -205,15 +205,51 @@ def get_oauth_url() -> str:
     sb = get_supabase()
     if not sb:
         return ""
+    if st.session_state.get("oauth_url"):
+        return st.session_state["oauth_url"]
     try:
         res = sb.auth.sign_in_with_oauth({
             "provider": "google",
             "options":  {"redirect_to": REDIRECT_URL, "scopes": "openid email profile"}
         })
+        st.session_state["oauth_url"] = res.url
+        verifier = _get_oauth_code_verifier(sb)
+        if verifier:
+            st.session_state["oauth_code_verifier"] = verifier
         return res.url
     except Exception as e:
         st.error(f"OAuth setup error: {e}")
         return ""
+
+
+def _get_oauth_code_verifier(sb) -> str:
+    """Read Supabase's PKCE verifier before another rerun can replace it."""
+    verifier = st.session_state.get("oauth_code_verifier", "")
+    if verifier:
+        return verifier
+    try:
+        auth = sb.auth
+        storage = getattr(auth, "_storage", None)
+        storage_key = getattr(auth, "_storage_key", "supabase.auth.token")
+        if storage:
+            return storage.get_item(f"{storage_key}-code-verifier") or ""
+    except Exception:
+        pass
+    return ""
+
+
+def _clear_oauth_attempt(sb=None):
+    for key in ["oauth_url", "oauth_code_verifier"]:
+        st.session_state.pop(key, None)
+    try:
+        sb = sb or get_supabase()
+        auth = sb.auth
+        storage = getattr(auth, "_storage", None)
+        storage_key = getattr(auth, "_storage_key", "supabase.auth.token")
+        if storage:
+            storage.remove_item(f"{storage_key}-code-verifier")
+    except Exception:
+        pass
 
 
 def _query_param_value(params, key: str) -> str:
@@ -238,8 +274,13 @@ def handle_oauth_callback():
         return
 
     try:
+        code_verifier = _get_oauth_code_verifier(sb)
+        if not code_verifier:
+            raise RuntimeError("OAuth session expired. Please click the Google button again.")
+
         session = sb.auth.exchange_code_for_session({
             "auth_code": _query_param_value(params, "code"),
+            "code_verifier": code_verifier,
             "redirect_to": REDIRECT_URL,
         })
         u       = session.user
@@ -262,10 +303,12 @@ def handle_oauth_callback():
             u.user_metadata.get("full_name", ""),
             u.user_metadata.get("avatar_url", "")
         )
+        _clear_oauth_attempt(sb)
         st.query_params.clear()
         st.rerun()
 
     except Exception as e:
+        _clear_oauth_attempt(sb)
         st.error(f"Google login failed: {e}")
         st.query_params.clear()
 
@@ -382,6 +425,7 @@ def sign_out():
             sb.auth.sign_out()
         except Exception:
             pass
+    _clear_oauth_attempt(sb)
     for k in ["user", "access_token", "refresh_token", "current_conv_id", "chat_history"]:
         st.session_state.pop(k, None)
     st.rerun()
