@@ -11,6 +11,7 @@ from sourcemind.auth import (AuthExpired, OAuthStateStore, accept_session, clear
 from sourcemind.engine import answer, contradiction_scan, omission_experiment
 from sourcemind.ingestion import read_pdf, read_url
 from sourcemind.repository import Repository
+from sourcemind.browser_binding import browser_binding
 
 load_dotenv()
 st.set_page_config(page_title="SourceMind · Evidence Lab", page_icon="◈", layout="wide")
@@ -90,11 +91,16 @@ def oauth_callback():
         st.query_params.clear()
         st.warning("Google sign-in was canceled or refused. Try email sign-in or start again.")
     if "code" in st.query_params:
+        binding = browser_binding("read", key="oauth_return")
+        if binding is None:
+            st.info("Completing secure Google sign-in…")
+            st.stop()
         try:
             response = finish_google(client(), st.query_params["code"], st.query_params.get("oauth_state", ""),
-                                     oauth_store(), st.context.cookies.get("sourcemind_oauth_nonce", ""))
+                                     oauth_store(), binding.get("nonce", ""))
             accept_session(st.session_state, response)
         except Exception as exc:
+            st.session_state["oauth_failed"] = True
             failure("Google sign-in", exc)
         finally:
             st.query_params.clear()
@@ -127,6 +133,8 @@ def login_page():
     configured = bool(config("SUPABASE_URL") and (config("SUPABASE_PUBLISHABLE_KEY") or config("SUPABASE_ANON_KEY")))
     with sign_in:
         st.subheader("Welcome to your private workspace")
+        if st.session_state.pop("oauth_failed", False):
+            st.error("Google sign-in could not finish. Start again in this browser and allow site cookies.")
         if not configured:
             st.info("Account access is awaiting database configuration. The Evidence Lab is available to explore.")
         with st.form("login", clear_on_submit=True):
@@ -150,14 +158,14 @@ def login_page():
                 except Exception as exc:
                     failure("Google sign-in", exc)
             if st.session_state.get("google_url"):
-                import streamlit.components.v1 as components
                 # Browser-bound state prevents a callback link opened in another
                 # browser from signing that browser into the initiator's account.
                 nonce = st.session_state["google_nonce"]
-                secure = "; Secure" if config("REDIRECT_URL", "https://adaptive-rag1.streamlit.app/").startswith("https:") else ""
-                cookie = f"sourcemind_oauth_nonce={nonce}; Path=/; SameSite=Lax; Max-Age=600{secure}"
-                components.html(f"<script>document.cookie = {json.dumps(cookie)};</script>", height=0)
-                st.link_button("Continue with Google", st.session_state["google_url"])
+                binding = browser_binding("write", nonce, key=f"oauth_start_{nonce}")
+                if binding and binding.get("ready"):
+                    st.link_button("Continue with Google", st.session_state["google_url"])
+                elif binding is not None:
+                    st.error("Allow site cookies to use Google sign-in, or sign in with email.")
         st.caption("Your documents and conversations belong to your account. A full browser reload requires signing in again.")
     with sign_up:
         with st.form("signup", clear_on_submit=True):

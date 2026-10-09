@@ -17,6 +17,7 @@ jobs:
           node-version: '22'
       - run: npm install --prefix .test-tools --no-audit --no-fund @electric-sql/pglite@0.5.8
       - run: node tests/check_database.mjs
+      - run: node tests/check_browser_binding.mjs
   embedding-runtime:
     runs-on: ubuntu-latest
     steps:

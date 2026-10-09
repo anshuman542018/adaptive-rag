@@ -59,7 +59,7 @@ Choose a Site URL without a trailing slash for consistent links. Retain the rest
 3. In Supabase Redirect URLs, allow `https://adaptive-rag1.streamlit.app/**` so the opaque `oauth_state` query parameter is retained. Allow the matching localhost URL for local development. Do not allow arbitrary external domains.
 4. Set `ENABLE_GOOGLE_AUTH = "true"` after verifying the provider.
 
-The one-use PKCE verifier lives in a server-local SQLite store for 10 minutes, identified by a cryptographically random redirect nonce. A matching SameSite browser cookie binds the return to the browser that initiated it. It survives Streamlit reconnecting after OAuth. It contains no access/refresh tokens. A server restart invalidates pending attempts; start again. Multiple replicas need a shared state store.
+The one-use PKCE verifier lives in a server-local SQLite store for 10 minutes, identified by a cryptographically random redirect nonce. A matching SameSite browser cookie binds the return to the browser that initiated it. A small bundled Streamlit component reads only this nonce, because Community Cloud filters custom cookies before the backend WebSocket request. It contains no access/refresh tokens. It survives Streamlit reconnecting after OAuth. A server restart invalidates pending attempts; start again. Multiple replicas need a shared state store.
 
 ## Existing documents
 
