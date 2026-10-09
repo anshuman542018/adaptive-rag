@@ -1,0 +1,29 @@
+<!doctype html>
+<html><head><meta charset="utf-8"></head><body>
+<script>
+// Only a short-lived OAuth nonce crosses this bridge. Never read other cookies.
+const parentOrigin = new URL(document.referrer || location.href).origin;
+const send = (type, fields = {}) => parent.postMessage({isStreamlitMessage: true, type, ...fields}, parentOrigin);
+let lastResult;
+window.addEventListener("message", event => {
+  if (event.source !== parent || event.origin !== parentOrigin || !event.data || event.data.type !== "streamlit:render") return;
+  const args = event.data.args;
+  let result;
+  try {
+    if (args.mode === "write" && /^[A-Za-z0-9_-]{40,80}$/.test(args.nonce)) {
+      document.cookie = `sourcemind_oauth_nonce=${args.nonce}; Path=/; SameSite=Lax; Max-Age=600${location.protocol === "https:" ? "; Secure" : ""}`;
+    }
+    const entry = document.cookie.split(";").find(x => x.trim().startsWith("sourcemind_oauth_nonce="));
+    const nonce = entry ? entry.trim().slice("sourcemind_oauth_nonce=".length) : "";
+    result = args.mode === "write" ? {ready: nonce === args.nonce} : {nonce};
+  } catch (_) { result = args.mode === "write" ? {ready: false} : {nonce: ""}; }
+  const serialized = JSON.stringify(result);
+  if (serialized !== lastResult) {
+    lastResult = serialized;
+    send("streamlit:setComponentValue", {value: result, dataType: "json"});
+  }
+  send("streamlit:setFrameHeight", {height: 0});
+});
+send("streamlit:componentReady", {apiVersion: 1});
+</script>
+</body></html>
