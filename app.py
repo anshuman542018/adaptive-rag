@@ -89,9 +89,9 @@ def oauth_store():
 def oauth_callback():
     if st.session_state.get("auth_callback_done"):
         # Community Cloud remounts its app iframe when st.query_params changes.
-        # Clean consumed credentials with replaceState, without losing the JWT
-        # held by the current WebSocket session. Do not exchange the code twice.
-        browser_binding("clean", key="oauth_clean")
+        # Its wrapper also intercepts history replacement. Keep the consumed,
+        # one-use code until sign-out so the JWT stays on this connection.
+        # Neither access nor refresh tokens are ever put in the URL.
         return
     if "error" in st.query_params:
         st.query_params.clear()
