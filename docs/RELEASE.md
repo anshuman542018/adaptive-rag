@@ -12,6 +12,8 @@ Apply the SQL files in `supabase/migrations/` in filename order through Supabase
 
 Deploy the tested commit to the Streamlit app's configured branch. For a local run, use `python -m streamlit run app.py`. No documents or secrets belong in the Git repository.
 
+Set the Streamlit hosting runtime to Python 3.13, matching the clean Linux dependency/embedding check in CI. Python 3.14 is outside this pinned stack's supported runtime. The runtime is a hosting setting, separate from the Git branch.
+
 Verify: sign-up/confirmation, sign-in, upload a small text PDF, ask a question, inspect page citations, upload a contradictory PDF, run the scan, sign out, sign in as another account and confirm the library is private. Refresh and confirm saved documents and conversations remain.
 
 ## Rollback

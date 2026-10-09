@@ -1,9 +1,9 @@
 streamlit==1.45.1
---extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.8.0+cpu; sys_platform == "linux"
-torch==2.8.0; sys_platform != "linux"
+torch @ https://download.pytorch.org/whl/cpu/torch-2.8.0%2Bcpu-cp313-cp313-manylinux_2_28_x86_64.whl ; sys_platform == "linux" and python_version == "3.13" and platform_machine == "x86_64"
+torch==2.8.0; sys_platform != "linux" or python_version != "3.13" or platform_machine != "x86_64"
 transformers==4.56.1
 numpy==2.1.1
+pyarrow==24.0.0
 supabase==2.30.0
 groq==0.37.1
 sentence-transformers==5.1.0
