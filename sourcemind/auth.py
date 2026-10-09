@@ -66,8 +66,12 @@ def start_google(client, redirect_url: str, store: OAuthStateStore) -> tuple[str
 
 
 def finish_google(client, code: str, nonce: str, store: OAuthStateStore, browser_nonce: str):
-    if not code or not nonce or not browser_nonce or not secrets.compare_digest(nonce, browser_nonce):
-        raise AuthExpired("Invalid Google sign-in callback. Please start again.")
+    if not code or not nonce:
+        raise AuthExpired("Google returned an incomplete callback. Start again from this app.")
+    if not browser_nonce:
+        raise AuthExpired("The sign-in browser cookie is missing. Allow site cookies and start again.")
+    if not secrets.compare_digest(nonce, browser_nonce):
+        raise AuthExpired("A different Google sign-in attempt replaced this one. Close other login tabs and start again.")
     return client.auth.exchange_code_for_session({"auth_code": code, "code_verifier": store.consume(nonce)})
 
 
