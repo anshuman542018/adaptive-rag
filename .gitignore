@@ -8,3 +8,11 @@ sourcemind_meta.json
 sourcemind_conflicts.json
 babel.json
 .streamlit/secrets.toml
+.env.*
+!.env.example
+.sourcemind/
+.test-tools/
+.pytest_cache/
+.venv/
+supabase/.temp/
+test-results/
