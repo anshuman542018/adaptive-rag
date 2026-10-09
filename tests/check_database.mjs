@@ -15,7 +15,7 @@ GRANT EXECUTE ON FUNCTION auth.uid() TO authenticated,anon;
 INSERT INTO auth.users VALUES ('11111111-1111-1111-1111-111111111111'),('22222222-2222-2222-2222-222222222222');
 `);
 const migrations=await fs.readdir(new URL('../supabase/migrations/',import.meta.url));
-const sql=await fs.readFile(new URL(`../supabase/migrations/${migrations.find(f=>f.endsWith('_evidence_storage.sql'))}`,import.meta.url),'utf8');
+const sql=(await Promise.all(migrations.filter(f=>f.endsWith('.sql')).sort().map(f=>fs.readFile(new URL(`../supabase/migrations/${f}`,import.meta.url),'utf8')))).join('\n');
 await db.exec(sql);
 await db.exec(sql); // idempotence
 async function identity(id){

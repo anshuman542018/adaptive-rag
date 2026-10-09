@@ -8,7 +8,7 @@ The migration adds durable passages, evidence reports, ownership FKs and explici
 
 ## Deploy
 
-Apply `supabase/migrations/*_evidence_storage.sql` once through Supabase migration tooling or the dashboard SQL editor. Use a publishable/legacy anon key, never service-role. Configure the exact deployed URL and email templates described in README_SETUP.md. Google remains opt-in until its provider and redirect allowlist are ready.
+Apply the SQL files in `supabase/migrations/` in filename order through Supabase migration tooling or the dashboard SQL editor. Use a publishable/legacy anon key, never service-role. Configure the exact deployed URL and email templates described in README_SETUP.md. Configure the Google provider and redirect allowlist before enabling it.
 
 Deploy the tested commit to the Streamlit app's configured branch. For a local run, use `python -m streamlit run app.py`. No documents or secrets belong in the Git repository.
 

@@ -6,7 +6,7 @@ SourceMind uses Groq for structured model calls, local MiniLM embeddings, and Su
 
 Use the existing SourceMind Supabase project or create your own. It must be active: a paused project cannot serve login or database requests. Free-project limits can prevent restoration until another project is paused or a paid plan is enabled.
 
-Run `supabase/migrations/20261009172950_evidence_storage.sql` in the Supabase SQL editor, or apply it through the Supabase CLI. It is repeatable and adds to the old schema. `setup_database.sql` is the identical bootstrap copy. Review duplicate `(user_id, fingerprint)` records before upgrading an existing deployment; resolve them deliberately rather than deleting data during migration.
+Run the SQL files in `supabase/migrations/` in filename order in the Supabase SQL editor, or apply them through the Supabase CLI. They are repeatable and add to the old schema. `setup_database.sql` is the combined bootstrap copy. Review duplicate `(user_id, fingerprint)` records before upgrading an existing deployment; resolve them deliberately rather than deleting data during migration.
 
 Every table enables RLS with `auth.uid()` ownership, explicit authenticated grants and write ownership checks. Composite foreign keys bind passages and chat messages to documents/conversations owned by the same user. The `ingest_document` RPC is a SECURITY INVOKER transaction; it stamps ownership from the JWT and never trusts a caller-supplied owner ID.
 
