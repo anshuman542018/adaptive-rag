@@ -61,7 +61,7 @@ def test_google_callback_keeps_session_without_reexchanging_code(monkeypatch):
     assert not app.exception
     assert app.session_state['user']['id']=='test'
     assert any(t.label=='Source library' for t in app.tabs)
-    assert app.query_params['code']=='single-use-code'  # No remount-triggering query mutation.
+    assert app.query_params['code']==['single-use-code']  # No remount-triggering query mutation.
     app.run(timeout=20)
     assert exchanges==['exchange']
     assert not app.exception
