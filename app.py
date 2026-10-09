@@ -87,6 +87,12 @@ def oauth_store():
 
 
 def oauth_callback():
+    if st.session_state.get("auth_callback_done"):
+        # Community Cloud remounts its app iframe when st.query_params changes.
+        # Clean consumed credentials with replaceState, without losing the JWT
+        # held by the current WebSocket session. Do not exchange the code twice.
+        browser_binding("clean", key="oauth_clean")
+        return
     if "error" in st.query_params:
         st.query_params.clear()
         st.warning("Google sign-in was canceled or refused. Try email sign-in or start again.")
@@ -99,11 +105,13 @@ def oauth_callback():
             response = finish_google(client(), st.query_params["code"], st.query_params.get("oauth_state", ""),
                                      oauth_store(), binding.get("nonce", ""))
             accept_session(st.session_state, response)
+            st.session_state["auth_callback_done"] = True
         except Exception as exc:
             st.session_state["oauth_failed"] = True
             failure("Google sign-in", exc)
         finally:
-            st.query_params.clear()
+            if not st.session_state.get("user"):
+                st.query_params.clear()
         if st.session_state.get("user"):
             st.rerun()
     if "token_hash" in st.query_params:
@@ -113,11 +121,13 @@ def oauth_callback():
                 raise ValueError("Invalid verification type")
             response = client().auth.verify_otp({"token_hash": st.query_params["token_hash"], "type": kind})
             accept_session(st.session_state, response)
+            st.session_state["auth_callback_done"] = True
             st.session_state["recovery"] = kind == "recovery"
         except Exception as exc:
             failure("Email verification", exc)
         finally:
-            st.query_params.clear()
+            if not st.session_state.get("user"):
+                st.query_params.clear()
         if st.session_state.get("user"):
             st.rerun()
 
@@ -311,6 +321,7 @@ def workspace(user: dict):
             except Exception:
                 pass
             clear_session(st.session_state)
+            st.query_params.clear()
             st.rerun()
         st.divider()
         mode = st.radio("Investigation depth", ["Adaptive", "Forensic"], help="Forensic always plans multiple searches. Both modes validate citations and audit claims.")
