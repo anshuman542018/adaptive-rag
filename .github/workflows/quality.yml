@@ -26,9 +26,11 @@ jobs:
           python-version: '3.13'
           cache: pip
       - name: Install actual production dependencies
-        run: pip install -r requirements.txt
+        run: |
+          pip install uv
+          uv pip install --system -r requirements.txt
       - name: Verify production imports and real embedding model
         env:
           USE_TF: '0'
         run: |
-          python -c "import streamlit, supabase, groq, pypdf; from sentence_transformers import SentenceTransformer; model=SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2'); vectors=model.encode(['SourceMind deployment check'],normalize_embeddings=True); assert vectors.shape==(1,384); print('Production imports and embeddings passed')"
+          python -c "import streamlit, supabase, groq, pypdf, pyarrow; assert pyarrow.array([1,2]).to_pylist()==[1,2]; from sentence_transformers import SentenceTransformer; model=SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2'); vectors=model.encode(['SourceMind deployment check'],normalize_embeddings=True); assert vectors.shape==(1,384); print('Production imports and embeddings passed')"
