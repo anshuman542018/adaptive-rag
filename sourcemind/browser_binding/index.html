@@ -10,12 +10,24 @@ window.addEventListener("message", event => {
   const args = event.data.args;
   let result;
   try {
+    if (args.mode === "clean") {
+      // Same-origin history replacement does not remount Cloud's app iframe.
+      for (const target of [parent, top]) {
+        try {
+          const url = new URL(target.location.href);
+          for (const key of ["code", "oauth_state", "token_hash", "type"]) url.searchParams.delete(key);
+          target.history.replaceState(target.history.state, "", url);
+        } catch (_) { /* Cross-origin embedding cannot alter the outer URL. */ }
+      }
+      result = {ready: true};
+    } else {
     if (args.mode === "write" && /^[A-Za-z0-9_-]{40,80}$/.test(args.nonce)) {
       document.cookie = `sourcemind_oauth_nonce=${args.nonce}; Path=/; SameSite=Lax; Max-Age=600${location.protocol === "https:" ? "; Secure" : ""}`;
     }
     const entry = document.cookie.split(";").find(x => x.trim().startsWith("sourcemind_oauth_nonce="));
     const nonce = entry ? entry.trim().slice("sourcemind_oauth_nonce=".length) : "";
     result = args.mode === "write" ? {ready: nonce === args.nonce} : {nonce};
+    }
   } catch (_) { result = args.mode === "write" ? {ready: false} : {nonce: ""}; }
   const serialized = JSON.stringify(result);
   if (serialized !== lastResult) {

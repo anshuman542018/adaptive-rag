@@ -37,3 +37,31 @@ def test_authenticated_workspace_renders_saved_evidence(monkeypatch):
     assert not app.exception
     assert any(t.label=='PDF disagreements' for t in app.tabs)
     assert any(t.label=='Knowledge gaps' for t in app.tabs)
+
+
+def test_google_callback_keeps_session_without_reexchanging_code(monkeypatch):
+    from types import SimpleNamespace as NS
+    response=NS(user=NS(id='test',email='test@example.invalid',user_metadata={}),
+                session=NS(access_token='token',refresh_token='refresh',expires_at=10**12))
+    exchanges=[]
+    monkeypatch.setattr('sourcemind.auth.finish_google',lambda *_:exchanges.append('exchange') or response)
+    monkeypatch.setattr('sourcemind.auth.ensure_session',lambda state,_:state['user'])
+    monkeypatch.setattr('sourcemind.browser_binding.browser_binding',lambda *_args,**_kwargs:{'nonce':'browser-nonce'})
+    class EmptyRepository:
+        def __init__(self,*_): pass
+        def documents(self): return []
+        def conversations(self): return []
+        def rows(self,*_): return []
+    monkeypatch.setattr('sourcemind.repository.Repository',EmptyRepository)
+    app=AppTest.from_file('app.py')
+    app.session_state['supabase_client']=object()
+    app.query_params['code']='single-use-code'
+    app.query_params['oauth_state']='browser-nonce'
+    app.run(timeout=20)
+    assert not app.exception
+    assert app.session_state['user']['id']=='test'
+    assert any(t.label=='Source library' for t in app.tabs)
+    assert app.query_params['code']=='single-use-code'  # No remount-triggering query mutation.
+    app.run(timeout=20)
+    assert exchanges==['exchange']
+    assert not app.exception
