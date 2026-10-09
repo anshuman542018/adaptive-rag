@@ -17,3 +17,18 @@ jobs:
           node-version: '22'
       - run: npm install --prefix .test-tools --no-audit --no-fund @electric-sql/pglite@0.5.8
       - run: node tests/check_database.mjs
+  embedding-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+      - name: Install actual production dependencies
+        run: pip install -r requirements.txt
+      - name: Verify production imports and real embedding model
+        env:
+          USE_TF: '0'
+        run: |
+          python -c "import streamlit, supabase, groq, pypdf; from sentence_transformers import SentenceTransformer; model=SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2'); vectors=model.encode(['SourceMind deployment check'],normalize_embeddings=True); assert vectors.shape==(1,384); print('Production imports and embeddings passed')"
