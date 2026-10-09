@@ -1,0 +1,19 @@
+name: Evidence pipeline checks
+on: [push, pull_request]
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+      - name: Install lightweight test dependencies
+        run: pip install pytest==8.3.4 streamlit==1.45.1 python-dotenv==1.1.0 pypdf==6.12.0 numpy==2.2.6
+      - run: python -m pytest -q
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --prefix .test-tools --no-audit --no-fund @electric-sql/pglite@0.5.8
+      - run: node tests/check_database.mjs
