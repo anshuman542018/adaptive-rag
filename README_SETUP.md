@@ -12,6 +12,8 @@ Every table enables RLS with `auth.uid()` ownership, explicit authenticated gran
 
 ## App configuration
 
+In Streamlit Cloud's App settings → General, select **Python 3.13**. This is the tested production runtime. The pinned embedding/numerical packages do not support Python 3.14; choosing 3.14 can prevent the app from building. Changing the runtime rebuilds the hosting environment.
+
 Create an ignored `.env` locally or configure **Streamlit Cloud → App settings → Secrets**:
 
 ```toml
