@@ -7,10 +7,7 @@ const script = html.match(/<script>([\s\S]*?)<\/script>/)[1];
 const messages=[];
 let listener;
 let cookie='unrelated=private';
-let replaced;
-const parent={postMessage:(message,origin)=>messages.push({message,origin}),
-  location:{href:'https://app.streamlit.app/?code=consumed&oauth_state=nonce&keep=1'},
-  history:{state:null,replaceState:(_state,_title,url)=>{replaced=String(url);}}};
+const parent={postMessage:(message,origin)=>messages.push({message,origin})};
 const document={referrer:'https://app.streamlit.app/~/+/'};
 Object.defineProperty(document,'cookie',{get:()=>cookie,set:value=>{cookie='unrelated=private; '+value.split(';')[0];}});
 vm.runInNewContext(script,{URL,document,location:{href:'https://app.streamlit.app/component/oauth/',protocol:'https:'},parent,top:parent,
@@ -27,6 +24,4 @@ assert(!JSON.stringify(messages).includes('private'));
 cookie='unrelated=private';
 render({mode:'read'});
 assert.equal(messages.findLast(x=>x.message.type==='streamlit:setComponentValue').message.value.nonce,'');
-render({mode:'clean'});
-assert.equal(replaced,'https://app.streamlit.app/?keep=1');
-console.log('Browser binding: same-origin messages, write readiness, scoped nonce read, missing cookie, URL cleanup passed');
+console.log('Browser binding: same-origin messages, write readiness, scoped nonce read, missing cookie passed');

@@ -61,6 +61,8 @@ Choose a Site URL without a trailing slash for consistent links. Retain the rest
 
 The one-use PKCE verifier lives in a server-local SQLite store for 10 minutes, identified by a cryptographically random redirect nonce. A matching SameSite browser cookie binds the return to the browser that initiated it. A small bundled Streamlit component reads only this nonce, because Community Cloud filters custom cookies before the backend WebSocket request. It contains no access/refresh tokens. It survives Streamlit reconnecting after OAuth. A server restart invalidates pending attempts; start again. Multiple replicas need a shared state store.
 
+Community Cloud remounts the app when callback query parameters change, including through its browser history wrapper. A successful callback therefore keeps its already-consumed one-use code until sign-out; reruns never exchange it again. No access or refresh token is included in the URL. Share the app's root URL rather than a callback URL. Reloading requires sign-in again.
+
 ## Existing documents
 
 The upgrade preserves the original  metadata/history rows. The old app stored searchable PDF text in local Chroma, which may have disappeared when Streamlit redeployed. SourceMind displays these as legacy records with zero durable passages. Re-upload the original PDF to rebuild evidence, then remove the old metadata record if desired. Missing text cannot be reconstructed from an old summary.
