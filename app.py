@@ -40,6 +40,7 @@ html,body,[class*="css"] {font-family:'DM Sans',sans-serif;}
 [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {background:#23262c;border-radius:18px;padding:1rem 1.2rem;}
 [data-testid="stChatInput"] {border-radius:20px;}
 [data-testid="stExpander"] {border-color:#30343b;}
+[data-testid="stPopoverButton"] p {white-space:nowrap;}
 .welcome {text-align:center;padding:14vh 0 3rem;}
 .welcome h1 {font-size:2rem;font-weight:600;letter-spacing:-.04em;}
 .welcome p {color:#a4a8b2;font-size:1rem;}
@@ -397,7 +398,7 @@ def workspace(user: dict):
                     st.query_params.clear()
                     st.rerun()
     if page == "Ask & inspect":
-        title, options = st.columns([4, 1])
+        title, options = st.columns([3, 1])
         with title:
             st.caption("ASK & INSPECT")
         with options:
