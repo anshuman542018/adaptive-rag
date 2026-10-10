@@ -72,3 +72,5 @@ The upgrade preserves the original  metadata/history rows. The old app stored se
 Sign in, upload two text PDFs, ask about a fact, inspect both the quote and the one-based page number. Run PDF disagreements and compare both source quotes. Sign out and use a second account to verify isolation. Reconnect and sign in again: documents and chat history should still be present.
 
 Local password sessions do not use persistent browser cookies; a full browser reload requires signing in again. In-process reruns refresh expiring JWTs and save rotated refresh tokens.
+
+The default Groq model is `llama-3.3-70b-versatile`. If Groq reports that model unavailable or denies that specific model, the adapter tries `openai/gpt-oss-20b` once through the same Groq account. Override `GROQ_MODEL` and `GROQ_FALLBACK_MODEL` to choose models; set an empty fallback to disable recovery. Authentication failures and rate limits never trigger a model switch. Logs retain only error classes and HTTP status codes, never provider bodies, keys or document content.

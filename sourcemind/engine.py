@@ -248,11 +248,14 @@ def answer(question: str, corpus: list[Passage], model: Callable, embed: Callabl
                 result["answer"] = "\n\n".join(c["claim"] + " " + " ".join(f"[{e['id']}]" for e in c["evidence"]) for c in result["claims"])
             elif not result["limitations"]:
                 result["limitations"] = ["No proposed claims passed both citation and support checks."]
-        except Exception:
+        except Exception as exc:
             # No partial draft gets displayed when verification failed.
             result["claims"] = []
-            result["limitations"] = ["The model or evidence audit failed. Retry; no unverified answer has been displayed."]
+            from .providers import ModelServiceError
+            result["limitations"] = [str(exc) if isinstance(exc, ModelServiceError) else "The model or evidence audit failed. Retry; no unverified answer has been displayed."]
             trace.append({"stage": "audit", "detail": "Failed closed."})
+            if isinstance(exc, ModelServiceError):
+                result["service_error"] = exc.category
     trace.append({"stage": "audit", "accepted": len(result["claims"]), "rejected": len(result["rejected_claims"])})
     result["stress"] = source_stress(result["claims"], passages)
     result["metrics"] = {"model_calls": calls, "latency_ms": round((time.perf_counter()-started)*1000),
