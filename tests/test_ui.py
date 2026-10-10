@@ -33,10 +33,12 @@ def test_authenticated_workspace_renders_saved_evidence(monkeypatch):
     app.session_state['user']={'id':'test','name':'Test','email':'test@example.invalid'}
     app.session_state['supabase_client']=object()
     app.session_state['conversation_id']='conversation'
+    app.session_state['omission_m2']={**report,'experiment':{'excluded_document_id':'d3','remaining_passages':2}}
     app.run(timeout=20)
     assert not app.exception
     assert any(t.label=='PDF disagreements' for t in app.tabs)
     assert any(t.label=='Knowledge gaps' for t in app.tabs)
+    assert any(b.label=='Download alternative evidence report' for b in app.get('download_button'))
 
 
 def test_google_callback_keeps_session_without_reexchanging_code(monkeypatch):
