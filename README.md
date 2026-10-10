@@ -15,6 +15,8 @@ An ordinary RAG demo retrieves passages and generates an answer. SourceMind expo
 3. **Claim gates:** proposed claims require a quotation from the cited passage. A separate model call checks whether each quote actually supports the claim. Unsupported claims are withheld; audit failures abstain.
 4. **PDF disagreement analysis:** topical cross-document passage pairs include near duplicates with different numbers. Findings include both quotes/pages and distinguish incompatible claims from different scopes and historical changes.
 5. **Source stress test:** remove each document's citations and count which claims lose all support. Several chunks of the same PDF count as one document. In authenticated chat, you can also run a full omission experiment: re-retrieve, draft and audit with one chosen document excluded, then inspect the alternative answer without overwriting the original.
+
+The workspace opens directly to chat. The sidebar contains **New chat**, **Sources**, a **Tools** menu and compact conversation rows. Account actions sit at the bottom. Each answer keeps its evidence behind **View sources & details**; choose quotes, limitations, source dependency or retrieval steps only when needed. **Options** holds the answer depth and library counts.
 6. **Visible trace:** inspect searches, retrieval diagnostics, accepted/rejected claims, latency, call count and downloadable JSON reports.
 
 This is a distinctive combination of known techniques, not a claim of unprecedented research. The stress test measures **citation dependency**, not whether a claim is objectively true. Two documents may copy the same underlying source. Exact quote checks are deterministic; semantic support and contradiction classification remain model assessments.

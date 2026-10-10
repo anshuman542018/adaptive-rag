@@ -36,9 +36,25 @@ def test_authenticated_workspace_renders_saved_evidence(monkeypatch):
     app.session_state['omission_m2']={**report,'experiment':{'excluded_document_id':'d3','remaining_passages':2}}
     app.run(timeout=20)
     assert not app.exception
-    assert any(t.label=='PDF disagreements' for t in app.tabs)
-    assert any(t.label=='Knowledge gaps' for t in app.tabs)
-    assert any(b.label=='Download alternative evidence report' for b in app.get('download_button'))
+    assert not app.tabs  # The workspace opens directly to the conversation.
+    assert not app.get('metric')
+    assert any(e.label=='View sources & details' and not e.proto.expanded for e in app.expander)
+    app.selectbox(key='detail_view_m2').select('Source dependency').run()
+    assert not app.exception
+    assert any(b.label=='Export alternative report' for b in app.get('download_button'))
+    next(b for b in app.button if b.label=='Sources').click().run()
+    assert not app.exception
+    assert app.session_state['workspace_page']=='Source library'
+    assert not app.chat_input
+    next(b for b in app.button if b.label=='Knowledge gaps').click().run()
+    assert not app.exception
+    assert any(f.label=='Probe questions (one per line)' for f in app.text_area)
+    app.button(key='conv_conversation').click().run()
+    assert len(app.chat_message)==2
+    next(b for b in app.button if b.label=='New chat').click().run()
+    assert not app.exception
+    assert not app.chat_message
+    assert 'conversation_id' not in app.session_state
 
 
 def test_google_callback_keeps_session_without_reexchanging_code(monkeypatch):
@@ -62,7 +78,7 @@ def test_google_callback_keeps_session_without_reexchanging_code(monkeypatch):
     app.run(timeout=20)
     assert not app.exception
     assert app.session_state['user']['id']=='test'
-    assert any(t.label=='Source library' for t in app.tabs)
+    assert any(b.label=='Sources' for b in app.button)
     assert app.query_params['code']==['single-use-code']  # No remount-triggering query mutation.
     app.run(timeout=20)
     assert exchanges==['exchange']

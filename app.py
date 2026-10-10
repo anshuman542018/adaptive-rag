@@ -15,18 +15,40 @@ from sourcemind.browser_binding import browser_binding
 from sourcemind.providers import run_model
 
 load_dotenv()
-st.set_page_config(page_title="SourceMind · Evidence Lab", page_icon="◈", layout="wide")
+st.set_page_config(page_title="SourceMind", page_icon="◈", layout="wide")
 LOG = logging.getLogger("sourcemind")
 st.markdown("""<style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
 html,body,[class*="css"] {font-family:'DM Sans',sans-serif;}
-.stApp {background:#080e19;color:#edf3ff;}
-[data-testid="stSidebar"] {background:#101827;border-right:1px solid #263349;}
-h1 {letter-spacing:-.05em;} [data-testid="stMetric"] {background:#121e30;border:1px solid #253650;border-radius:12px;padding:18px;}
+.stApp {background:#101215;color:#eceef2;}
+[data-testid="stHeader"] {background:transparent;}
+[data-testid="stSidebar"] {background:#17191d;border-right:1px solid #292c32;}
+[data-testid="stMainBlockContainer"] {max-width:960px;padding-top:2rem;}
+[data-testid="stSidebar"] [data-testid="stButton"] button {width:100%;justify-content:flex-start;border:0;background:transparent;border-radius:8px;min-height:2.4rem;box-shadow:none;}
+[data-testid="stSidebar"] [data-testid="stButton"] button:hover {background:#292c32;}
+[data-testid="stSidebar"] [data-testid="stButton"] button[kind="primary"] {background:#30343b;color:#fff;}
+.st-key-sidebar-chats [data-testid="stButton"] button p {white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;max-width:100%;font-size:.88rem;}
+.st-key-sidebar-chats [data-testid="stButton"] button {display:block;padding:.55rem .75rem;}
+[data-testid="stSidebarUserContent"] > div > [data-testid="stVerticalBlockBorderWrapper"] > [data-testid="stVerticalBlock"] {height:calc(100dvh - 110px);gap:.75rem;}
+[data-testid="stSidebarUserContent"] > div > [data-testid="stVerticalBlockBorderWrapper"] > [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlockBorderWrapper"]:has(>.st-key-sidebar-chats) {flex:1;min-height:0;overflow-y:auto;}
+.st-key-sidebar-nav {gap:.3rem;}
+.st-key-sidebar-chats {gap:.2rem;}
+.st-key-sidebar-account {padding-top:.6rem;border-top:1px solid #30343b;}
+[data-testid="stSidebar"] [data-testid="stPopoverButton"] {width:100%;justify-content:flex-start;border:0;background:transparent;}
+[data-testid="stSidebar"] [data-testid="stPopoverButton"]:hover {background:#292c32;}
+[data-testid="stChatMessage"] {background:transparent;padding:.75rem 0;}
+[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {background:#23262c;border-radius:18px;padding:1rem 1.2rem;}
+[data-testid="stChatInput"] {border-radius:20px;}
+[data-testid="stExpander"] {border-color:#30343b;}
+.welcome {text-align:center;padding:14vh 0 3rem;}
+.welcome h1 {font-size:2rem;font-weight:600;letter-spacing:-.04em;}
+.welcome p {color:#a4a8b2;font-size:1rem;}
+h1 {letter-spacing:-.05em;}
 .eyebrow {color:#67e8c4;font-size:.78rem;letter-spacing:.18em;text-transform:uppercase;}
 .hero {font-size:3.2rem;font-weight:700;letter-spacing:-.06em;margin:0;}
 .deck {color:#a6b7d0;max-width:720px;font-size:1.1rem;line-height:1.6;}
 .stButton>button[kind="primary"] {background:#41d9b0;color:#051b16;border:0;}
+@media(max-width:640px) {[data-testid="stMainBlockContainer"] {padding:1.2rem 1rem;}.welcome {padding-top:8vh;}}
 </style>""", unsafe_allow_html=True)
 
 
@@ -134,7 +156,7 @@ def oauth_callback():
 
 def hero():
     st.markdown("<p class='eyebrow'>Private knowledge · Visible evidence</p><p class='hero'>SourceMind</p>", unsafe_allow_html=True)
-    st.markdown("<p class='deck'>Ask your documents. Inspect every claim. Discover disagreements—and see which answers depend on a single source.</p>", unsafe_allow_html=True)
+    st.markdown("<p class='deck'>Answers from your documents, with sources you can check.</p>", unsafe_allow_html=True)
 
 
 def login_page():
@@ -231,46 +253,57 @@ def recovery_page():
                 failure("Password update", exc)
 
 
+def readable(text: str) -> str:
+    """Keep currency in generated prose from becoming Markdown math."""
+    return text.replace("$", r"\$")
+
+
 def show_report(report: dict, key: str, repo=None):
-    st.caption(f"Evidence status: {report.get('status', 'legacy')} · No numerical confidence is claimed.")
-    for limitation in report.get("limitations", []):
-        st.info(limitation)
-    for disagreement in report.get("disagreements", []):
-        st.warning(f"{disagreement['kind'].replace('_', ' ').title()}: {disagreement['explanation']}")
-    evidence, stress, trace = st.tabs(["Claim ledger & citations", "Source stress test", "Retrieval trace"])
-    with evidence:
+    status = {"supported": "Supported", "partial": "Partial evidence", "abstained": "No supported answer"}
+    st.caption(status.get(report.get("status"), "Saved evidence"))
+    view = st.selectbox("Show details", ["Sources & quotes", "Disagreements & limits", "Source dependency",
+        "Retrieval steps", "Withheld claims"], key=f"detail_view_{key}", label_visibility="collapsed")
+    if view == "Sources & quotes":
         sources = {s["id"]: s for s in report.get("sources", [])}
+        if not report.get("claims"):
+            st.caption("No claim passed the evidence checks. See disagreements & limits for details.")
         for i, claim in enumerate(report.get("claims", []), 1):
-            st.markdown(f"**Claim {i}**")
-            st.write(claim["claim"])
-            for e in claim["evidence"]:
-                s = sources[e["id"]]
-                page = f" · page {s['page']}" if s.get("page") else ""
-                st.caption(f"[{e['id']}] {s['source']}{page}")
-                st.code(e["quote"], language=None, wrap_lines=True)
-        if report.get("rejected_claims"):
-            with st.expander(f"{len(report['rejected_claims'])} withheld claim(s)"):
-                for claim in report["rejected_claims"]:
-                    st.write(claim["claim"])
-                    st.caption(claim["reason"])
-    with stress:
+            st.markdown(f"**Claim {i}** · {readable(claim['claim'])}")
+            for citation in claim["evidence"]:
+                source = sources[citation["id"]]
+                page = f" · page {source['page']}" if source.get("page") else ""
+                st.caption(f"[{citation['id']}] {source['source']}{page}")
+                st.code(citation["quote"], language=None, wrap_lines=True)
+    elif view == "Disagreements & limits":
+        for disagreement in report.get("disagreements", []):
+            st.warning(readable(f"{disagreement['kind'].replace('_', ' ').title()}: {disagreement['explanation']}"))
+        for limitation in report.get("limitations", []):
+            st.write(readable(limitation))
+        if not report.get("limitations") and not report.get("disagreements"):
+            st.caption("No disagreements or limitations were reported for this answer. Model checks can still make mistakes.")
+    elif view == "Withheld claims":
+        for claim in report.get("rejected_claims", []):
+            st.write(readable(claim["claim"]))
+            st.caption(readable(claim["reason"]))
+        if not report.get("rejected_claims"):
+            st.caption("No proposed claims were withheld.")
+    elif view == "Source dependency":
         data = report.get("stress", {})
-        st.write("What happens to the displayed claims if one document's citations disappear?")
+        st.caption("If one document's citations disappear, how much of this answer keeps support?")
         for row in data.get("removals", []):
-            st.write(f"**Remove {row['source']}** → {row['retained_fraction']:.0%} of claims retain a citation")
+            st.write(f"**{row['source']}** · {row['retained_fraction']:.0%} of claims retain a citation")
             if row["unsupported_claims"]:
-                st.caption("Claims without remaining support: " + ", ".join(map(str, row["unsupported_claims"])))
+                st.caption("Claims without support: " + ", ".join(map(str, row["unsupported_claims"])))
         st.caption(data.get("limitation", "No validated claims to test."))
         if repo and report.get("question"):
             cited_docs = {s["document_id"]: s["source"] for s in report.get("sources", []) if s.get("document_id")}
             if cited_docs:
                 st.divider()
-                st.write("**Test an alternative evidence set**")
-                st.caption("Re-run retrieval and both evidence checks on your current library with one document omitted. The original answer is kept.")
+                st.write("**Try the answer without a source**")
                 omitted = st.selectbox("Document to omit", list(cited_docs), format_func=cited_docs.get, key=f"omit_choice_{key}")
                 if st.button("Re-run without this document", key=f"omit_run_{key}"):
                     try:
-                        with st.spinner("Running the investigation without this source…"):
+                        with st.spinner("Checking the remaining sources…"):
                             st.session_state[f"omission_{key}"] = omission_experiment(report["question"], repo.corpus(), omitted,
                                 model, embed, report.get("history", []))
                     except Exception as exc:
@@ -278,29 +311,26 @@ def show_report(report: dict, key: str, repo=None):
                 alternate = st.session_state.get(f"omission_{key}")
                 if alternate:
                     st.write("**Alternative answer**")
-                    st.write(alternate["answer"])
-                    st.json(alternate["experiment"])
-                    # This report already sits in a message expander. Streamlit
-                    # 1.45 rejects nested expanders, so render the small ledger
-                    # directly rather than opening a second expander here.
-                    st.write("**Alternative citations**")
+                    st.write(readable(alternate["answer"]))
+                    st.caption(f"{alternate['experiment']['remaining_passages']} passages searched with the selected document excluded.")
                     alternate_sources = {s["id"]: s for s in alternate.get("sources", [])}
                     for claim in alternate.get("claims", []):
-                        st.write(claim["claim"])
                         for citation in claim["evidence"]:
                             source = alternate_sources[citation["id"]]
                             st.caption(f"[{citation['id']}] {source['source']} · page {source.get('page') or 'web'}")
                             st.code(citation["quote"], language=None, wrap_lines=True)
                     for limitation in alternate.get("limitations", []):
-                        st.info(limitation)
-                    st.download_button("Download alternative evidence report", json.dumps(alternate,indent=2,ensure_ascii=False),
+                        st.caption(readable(limitation))
+                    st.caption(alternate["experiment"].get("limitation", "Model and retrieval variation can affect this comparison."))
+                    st.download_button("Export alternative report", json.dumps(alternate,indent=2,ensure_ascii=False),
                         file_name="sourcemind-omission.json",mime="application/json",key=f"export_alternate_{key}")
-    with trace:
+    elif view == "Retrieval steps":
+        st.caption("Search queries, retrieved passages, and evidence checks for this answer.")
         for stage in report.get("trace", []):
-            st.json(stage)
-        st.json(report.get("metrics", {}))
-    st.download_button("Download evidence report", json.dumps(report, indent=2, ensure_ascii=False),
-                       file_name="sourcemind-evidence.json", mime="application/json", key=f"export_{key}")
+            st.json(stage, expanded=False)
+        st.json(report.get("metrics", {}), expanded=False)
+    st.download_button("Export evidence report", json.dumps(report, indent=2, ensure_ascii=False),
+                       file_name="sourcemind-evidence.json", mime="application/json", key=f"export_{key}", icon=":material/download:")
 
 
 def evidence_lab():
@@ -324,47 +354,77 @@ def evidence_lab():
             st.code(p.text, language=None, wrap_lines=True)
 
 
+def open_page(page: str, conversation_id: str | None = None):
+    st.session_state["workspace_page"] = page
+    if page == "Ask & inspect":
+        if conversation_id:
+            st.session_state["conversation_id"] = conversation_id
+        else:
+            st.session_state.pop("conversation_id", None)
+
+
 def workspace(user: dict):
     repo = Repository(client(), user["id"])
-    with st.sidebar:
-        st.title("◈ SourceMind")
-        st.write(user["name"])
-        st.caption(user["email"])
-        if st.button("Sign out"):
-            try:
-                client().auth.sign_out({"scope": "local"})
-            except Exception:
-                pass
-            clear_session(st.session_state)
-            st.query_params.clear()
-            st.rerun()
-        st.divider()
-        mode = st.radio("Investigation depth", ["Adaptive", "Forensic"], help="Forensic always plans multiple searches. Both modes validate citations and audit claims.")
-        if st.button("New conversation"):
-            st.session_state.pop("conversation_id", None)
-            st.rerun()
-        for conv in repo.conversations()[:25]:
-            if st.button(conv["title"], key=f"conv_{conv['id']}"):
-                st.session_state["conversation_id"] = conv["id"]
-                st.rerun()
-    hero()
     docs = repo.documents()
-    cols = st.columns(3)
-    cols[0].metric("Private sources", len(docs))
-    cols[1].metric("Stored passages", sum(d.get("indexed_chunks", 0) for d in docs))
-    cols[2].metric("Evidence checks", "Quote + audit")
-    chat, library, conflicts, gaps, lab = st.tabs(["Ask & inspect", "Source library", "PDF disagreements", "Knowledge gaps", "Evidence Lab"])
-    with chat:
+    page = st.session_state.get("workspace_page", "Ask & inspect")
+    with st.sidebar:
+        with st.container(key="sidebar-nav"):
+            st.markdown("### ◈ SourceMind")
+            st.button("New chat", icon=":material/edit_square:", use_container_width=True,
+                      on_click=open_page, args=("Ask & inspect",))
+            st.button("Sources", icon=":material/folder_open:", use_container_width=True,
+                      type="primary" if page == "Source library" else "secondary",
+                      on_click=open_page, args=("Source library",))
+            with st.popover("Tools", icon=":material/apps:", use_container_width=True):
+                for tool, icon in [("PDF disagreements", "compare_arrows"), ("Knowledge gaps", "search"), ("Evidence Lab", "science")]:
+                    st.button(tool, icon=f":material/{icon}:", use_container_width=True,
+                              on_click=open_page, args=(tool,))
+        with st.container(key="sidebar-chats"):
+            st.caption("Your chats")
+            for conv in repo.conversations()[:25]:
+                st.button(conv["title"], key=f"conv_{conv['id']}", use_container_width=True,
+                          type="primary" if page == "Ask & inspect" and st.session_state.get("conversation_id") == conv["id"] else "secondary",
+                          on_click=open_page, args=("Ask & inspect", conv["id"]))
+        with st.container(key="sidebar-account"):
+            with st.popover(user["name"], icon=":material/account_circle:", use_container_width=True):
+                st.caption(user["email"])
+                if st.button("Sign out", use_container_width=True):
+                    try:
+                        client().auth.sign_out({"scope": "local"})
+                    except Exception:
+                        pass
+                    clear_session(st.session_state)
+                    st.query_params.clear()
+                    st.rerun()
+    if page == "Ask & inspect":
+        title, options = st.columns([4, 1])
+        with title:
+            st.caption("ASK & INSPECT")
+        with options:
+            with st.popover("Options", use_container_width=True):
+                depth = st.radio("Answer depth", ["Adaptive", "Forensic"], key="investigation_mode",
+                    index=["Adaptive", "Forensic"].index(st.session_state.get("answer_depth", "Adaptive")),
+                    help="Forensic plans multiple searches. Both modes check quotes and audit support.")
+                st.session_state["answer_depth"] = depth
+                st.caption(f"{len(docs)} private sources · {sum(d.get('indexed_chunks', 0) for d in docs)} searchable passages")
+        mode = st.session_state.get("investigation_mode", "Adaptive")
         conversation_id = st.session_state.get("conversation_id")
         history = repo.messages(conversation_id) if conversation_id else []
+        if not history:
+            st.markdown("<div class='welcome'><h1>What would you like to know?</h1><p>Ask a question. Get an answer grounded in your sources.</p></div>", unsafe_allow_html=True)
         for msg in history:
             with st.chat_message(msg["role"]):
-                st.write(msg["content"])
+                st.write(readable(msg["content"]))
                 if msg.get("evidence_report"):
-                    with st.expander("Inspect answer evidence"):
-                        show_report(msg["evidence_report"], msg["id"], repo)
+                    report = msg["evidence_report"]
+                    if report.get("disagreements"):
+                        st.caption("Sources disagree · Open details to compare the evidence.")
+                    elif report.get("status") in {"partial", "abstained"}:
+                        st.caption("Limited evidence · Open details to see what could be established.")
+                    with st.expander("View sources & details"):
+                        show_report(report, msg["id"], repo)
         if not docs:
-            st.info("Add PDFs or web pages in the Source library to begin.")
+            st.info("Add your first document from Sources in the sidebar.")
         question = st.chat_input("Ask a question across your documents", disabled=not docs, max_chars=2000)
         if question:
             try:
@@ -378,7 +438,7 @@ def workspace(user: dict):
                 st.rerun()
             except Exception as exc:
                 failure("Answer generation or saving", exc)
-    with library:
+    elif page == "Source library":
         st.subheader("Add evidence to your private library")
         st.caption("PDFs: up to 15 MB / 200 pages / 500 passages per source. Workspace: 3,000 passages. Text is sent to Groq when answering or checking disagreements.")
         uploads = st.file_uploader("PDF documents", type=["pdf"], accept_multiple_files=True)
@@ -416,7 +476,7 @@ def workspace(user: dict):
                     repo.delete_document(doc["id"])
                     st.session_state.pop("scan_report", None)
                     st.rerun()
-    with conflicts:
+    elif page == "PDF disagreements":
         st.subheader("Where your PDFs disagree")
         st.write("Compare topical passages across documents, with exact quotations and page numbers on both sides. Historical changes and different scopes are shown separately.")
         budget = st.select_slider("Comparison budget", options=[12, 24, 48], value=12)
@@ -436,21 +496,21 @@ def workspace(user: dict):
         else:
             findings = [r["finding"] for r in repo.rows("conflicts") if r.get("finding")]
         for finding in findings:
-            with st.expander(f"{finding['kind'].replace('_', ' ').title()} · {finding['topic']}", expanded=True):
+            with st.expander(f"{finding['kind'].replace('_', ' ').title()} · {finding['topic']}"):
                 left, right = st.columns(2)
                 for col, side in [(left, "a"), (right, "b")]:
                     with col:
                         st.caption(f"{finding[f'source_{side}']} · page {finding.get(f'page_{side}') or 'web'}")
                         st.code(finding[f"quote_{side}"], language=None, wrap_lines=True)
-                st.write(finding["explanation"])
+                st.write(readable(finding["explanation"]))
         if report and not findings:
             st.info("No disagreements found in the assessed pairs. This does not establish that all documents agree.")
         if report:
             st.download_button("Download disagreement report", json.dumps(report, indent=2), "sourcemind-disagreements.json", "application/json")
-    with lab:
+    elif page == "Evidence Lab":
         evidence_lab()
 
-    with gaps:
+    elif page == "Knowledge gaps":
         st.subheader("Which questions can your evidence support?")
         st.write("Probe up to three questions. A gap means no answer passed the evidence checks; it does not prove the information is absent from every page.")
         with st.form("coverage_probes"):

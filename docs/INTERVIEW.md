@@ -10,7 +10,7 @@
 2. Run **Conflicting revenue figures**. Inspect the separate $12m and $18m statements, the PDF page numbers and the unresolved discrepancy. Do not claim the software can know which report is true.
 3. Run **A claim with two supporting documents**. Remove either document in the source stress report: the claim retains a citation from the other. Explain that provenance diversity is not proof of independent reporting.
 4. Run **Missing evidence**. Inspect the withheld profit claim: its purported quote does not occur in the retrieved passage.
-5. Sign into your private workspace, upload two real PDFs, ask a comparison and show the live claim ledger, retrieval trace and PDF disagreement scan. Download the JSON evidence report.
+5. Sign into your private workspace. Use **Sources** in the sidebar to upload two real PDFs, then **New chat** to ask a comparison. Open **View sources & details** under the answer and choose **Sources & quotes**, **Retrieval steps**, or **Source dependency**. Find the PDF disagreement scan under **Tools** in the sidebar. Export the JSON evidence report.
 
 ## Questions worth being ready for
 
