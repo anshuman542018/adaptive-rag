@@ -12,7 +12,7 @@ Apply the SQL files in `supabase/migrations/` in filename order through Supabase
 
 Deploy the tested commit to the Streamlit app's configured branch. For a local run, use `python -m streamlit run app.py`. No documents or secrets belong in the Git repository.
 
-The bundled configuration polls for code changes. If the host previously ran with file watching disabled, reboot it once to adopt this configuration. A Git pull/"Updated app" log alone does not establish which code the running process serves. Check the changed behavior after deployment; stored evidence remains in Postgres.
+File watching is disabled: Streamlit 1.45's watcher can inspect PyTorch's dynamic class paths and invalidate component-module registration during reload. After the host pulls a release, reboot the app from its management panel to load the new code and clear module introspection caches. A Git pull/"Updated app" log alone does not establish which code the running process serves. Verify the changed behavior after reboot; stored evidence remains in Postgres.
 
 Set the Streamlit hosting runtime to Python 3.13, matching the clean Linux dependency/embedding check in CI. Python 3.14 is outside this pinned stack's supported runtime. The runtime is a hosting setting, separate from the Git branch.
 
