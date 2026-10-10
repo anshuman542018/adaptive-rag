@@ -280,8 +280,21 @@ def show_report(report: dict, key: str, repo=None):
                     st.write("**Alternative answer**")
                     st.write(alternate["answer"])
                     st.json(alternate["experiment"])
-                    with st.expander("Inspect alternative citations"):
-                        show_report(alternate, f"alternate_{key}")
+                    # This report already sits in a message expander. Streamlit
+                    # 1.45 rejects nested expanders, so render the small ledger
+                    # directly rather than opening a second expander here.
+                    st.write("**Alternative citations**")
+                    alternate_sources = {s["id"]: s for s in alternate.get("sources", [])}
+                    for claim in alternate.get("claims", []):
+                        st.write(claim["claim"])
+                        for citation in claim["evidence"]:
+                            source = alternate_sources[citation["id"]]
+                            st.caption(f"[{citation['id']}] {source['source']} · page {source.get('page') or 'web'}")
+                            st.code(citation["quote"], language=None, wrap_lines=True)
+                    for limitation in alternate.get("limitations", []):
+                        st.info(limitation)
+                    st.download_button("Download alternative evidence report", json.dumps(alternate,indent=2,ensure_ascii=False),
+                        file_name="sourcemind-omission.json",mime="application/json",key=f"export_alternate_{key}")
     with trace:
         for stage in report.get("trace", []):
             st.json(stage)
