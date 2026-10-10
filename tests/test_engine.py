@@ -137,3 +137,20 @@ def test_omitting_only_document_abstains_without_calling_model():
     report=omission_experiment('Orion revenue',demo_corpus()[:1],'d1',lambda *_:pytest.fail('No model call expected'))
     assert report['status'] == 'abstained'
     assert report['sources'] == []
+
+
+def test_answer_disagreement_requires_two_audited_claims_and_sources():
+    case=demo_cases()['Conflicting revenue figures']
+    base=fixture_model(case)
+    def call(system,payload):
+        response=base(system,payload)
+        if 'Audit proposed claims' in system:
+            response['disagreements']=[{'claim_indices':[0,1],'kind':'contradiction','explanation':'The same annual revenue differs across reports.'},
+                                      {'claim_indices':[0,99],'kind':'contradiction','explanation':'Invalid index'},
+                                      {'claim_indices':[0,0],'kind':'contradiction','explanation':'Same claim'}]
+        return response
+    report=answer(case['question'],demo_corpus(),call)
+    assert report['status']=='partial'
+    assert len(report['disagreements'])==1
+    assert len(report['disagreements'][0]['claims'])==2
+    assert report['limitations']

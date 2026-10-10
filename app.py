@@ -55,8 +55,8 @@ def embed(text: str) -> list[float]:
 
 
 def model(system: str, payload: dict) -> dict:
-    return run_model(config("GROQ_API_KEY"), config("GROQ_MODEL", "llama-3.3-70b-versatile"),
-                     system, payload, fallback=config("GROQ_FALLBACK_MODEL", "openai/gpt-oss-20b"))
+    return run_model(config("GROQ_API_KEY"), config("GROQ_MODEL", "openai/gpt-oss-20b"),
+                     system, payload, fallback=config("GROQ_FALLBACK_MODEL", "openai/gpt-oss-120b"))
 
 
 def failure(action: str, exc: Exception):
@@ -235,6 +235,8 @@ def show_report(report: dict, key: str, repo=None):
     st.caption(f"Evidence status: {report.get('status', 'legacy')} · No numerical confidence is claimed.")
     for limitation in report.get("limitations", []):
         st.info(limitation)
+    for disagreement in report.get("disagreements", []):
+        st.warning(f"{disagreement['kind'].replace('_', ' ').title()}: {disagreement['explanation']}")
     evidence, stress, trace = st.tabs(["Claim ledger & citations", "Source stress test", "Retrieval trace"])
     with evidence:
         sources = {s["id"]: s for s in report.get("sources", [])}
