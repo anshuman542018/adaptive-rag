@@ -12,6 +12,7 @@ from sourcemind.engine import answer, contradiction_scan, omission_experiment
 from sourcemind.ingestion import read_pdf, read_url
 from sourcemind.repository import Repository
 from sourcemind.browser_binding import browser_binding
+from sourcemind.providers import run_model
 
 load_dotenv()
 st.set_page_config(page_title="SourceMind · Evidence Lab", page_icon="◈", layout="wide")
@@ -54,14 +55,8 @@ def embed(text: str) -> list[float]:
 
 
 def model(system: str, payload: dict) -> dict:
-    from groq import Groq
-    if not config("GROQ_API_KEY"):
-        raise ValueError("Groq is not configured.")
-    result = Groq(api_key=config("GROQ_API_KEY"), timeout=45, max_retries=1).chat.completions.create(
-        model=config("GROQ_MODEL", "llama-3.3-70b-versatile"), temperature=0,
-        response_format={"type": "json_object"}, max_tokens=3000,
-        messages=[{"role": "system", "content": system}, {"role": "user", "content": json.dumps(payload, ensure_ascii=False)}])
-    return json.loads(result.choices[0].message.content)
+    return run_model(config("GROQ_API_KEY"), config("GROQ_MODEL", "llama-3.3-70b-versatile"),
+                     system, payload, fallback=config("GROQ_FALLBACK_MODEL", "openai/gpt-oss-20b"))
 
 
 def failure(action: str, exc: Exception):
